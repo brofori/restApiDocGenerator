@@ -1,5 +1,7 @@
 # restApiDocGenerator
-Simple and easy to use script for generating Latex or PDF rest api documentations.
+Simple and easy to use script for generating Latex or PDF Rest API documentations.
+
+For those who want to generate stacit Rest API documentations.
 
 ## Setup
 
@@ -21,7 +23,22 @@ users.json
     "method": "POST",
     "description": "Update User.",
     "request": {
-      "email": {
+      }
+    },
+    "responses": {
+    }
+  }, ...
+]
+```
+Make sure that all of these attributes are included in your json.
+It is possible to use the swagger-editor to create the json files.
+
+
+
+Request object example:
+```javascript
+"request": {
+  "email": {
         "type": "string",
         "locatedIn": "body",
         "required": true,
@@ -42,21 +59,23 @@ users.json
         "description": "User name.",
         "value": "String"
       }
-    },
-    "responses": {
-      "200": {
-        "message": "message text",
-        "status": true,
-        "data": {}
-      },
-      "401": {
-        "message": "message text",
-        "status": true,
-        "error": "Error message"
-      }, ...
-    }
+  }
+}
+```
+
+```javascript
+"responses": {
+  "200": {
+    "message": "message text",
+    "status": true,
+    "data": {}
+  },
+  "401": {
+    "message": "message text",
+    "status": true,
+    "error": "Error message"
   }, ...
-]
+}
 ```
 
 ## Requirements
