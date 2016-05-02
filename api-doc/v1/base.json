@@ -1,0 +1,36 @@
+[
+  {
+    "route": "/",
+    "method": "ANY",
+    "request": {
+
+    },
+    "responses": {
+      "200": {
+        "message": "message text",
+        "status": true,
+        "data": {}
+      },
+      "401": {
+        "message": "message text",
+        "status": true,
+        "error": "Error message"
+      },
+      "403": {
+        "message": "message text",
+        "status": true,
+        "error": "Error message"
+      },
+      "404": {
+        "message": "message text",
+        "status": true,
+        "error": "Error message"
+      },
+      "500": {
+        "message": "message text",
+        "status": true,
+        "error": "Error message"
+      }
+    }
+  }
+]

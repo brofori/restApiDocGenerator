@@ -1,0 +1,118 @@
+[
+  {
+    "route": "/",
+    "method": "GET",
+    "request": {
+    },
+    "responses": {
+      "200": {
+        "message": "List of all users",
+        "status": true,
+        "data": [
+          {
+            "name": "string",
+            "id": "string",
+            "email": "string"
+          },
+          {
+            "name": "string",
+            "id": "string",
+            "email": "string"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "route": "/",
+    "method": "PUT",
+    "request": {
+      "email": {
+        "type": "string",
+        "locatedIn": "body",
+        "required": true,
+        "description": "User email.",
+        "value": "String"
+      },
+      "password": {
+        "type": "string",
+        "locatedIn": "body",
+        "required": true,
+        "description": "User password.",
+        "value": "String"
+      },
+      "name": {
+        "type": "string",
+        "locatedIn": "body",
+        "required": true,
+        "description": "User name.",
+        "value": "String"
+      }
+    },
+    "responses": {
+      "201": {
+        "message": "Created user.",
+        "status": true,
+        "data": { "id": "int" }
+      }
+    }
+  },
+  {
+    "route": "/:userid",
+    "method": "GET",
+    "request": {
+      "userid": {
+        "type": "string",
+        "locatedIn": "query",
+        "required": true,
+        "description": "User id.",
+        "value": "mongo db id"
+      }
+    },
+    "responses": {
+      "200": {
+        "message": "User",
+        "status": true,
+        "data": [
+          {
+            "name": "string",
+            "id": "string",
+            "email": "string"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "route": "/:userid",
+    "method": "POST",
+    "description": "Update user.",
+    "request": {
+      "userid": {
+        "type": "string",
+        "locatedIn": "query",
+        "description": "User id.",
+        "value": "mongo db id",
+        "data": {
+          "type": "string",
+          "locatedIn": "query",
+          "description": "Updated user data.",
+          "value": "Object containing user data."
+        }
+      }
+    },
+    "responses": {
+      "200": {
+        "message": "User",
+        "status": true,
+        "data": [
+          {
+            "name": "user1",
+            "id": "userId",
+            "email": "user1@mail.de"
+          }
+        ]
+      }
+    }
+  }
+]
