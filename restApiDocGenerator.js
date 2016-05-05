@@ -89,24 +89,34 @@ var parseEndpoints = function(endpointBaseName, endpoints) {
     return latexStr;
 }
 
-/* MAIN */
+/* 
+*
+*   MAIN 
+*
+*
+*/
 
 /**
  * Arguments:
- *  - nh: no pdf header, subsections only. used for integration in existing latex files.
  * 
  *  - tex: generate .tex file
  *  - pdf: generate .pdf file
  * 
+ *  - nh: don't set header. (API Documentation)
+ *  - ptT: build partial .tex file (No usepackage and \begin document strings). For including in existing tex file.
  *  - version=NAME_OF_VERSION_FOLDER: sets which version should be used.
  * 
  *  - filename=YOUR_FILENAME: sets the output filename.
  */
 
 var setHeader = true;
-var setDocumentHeader = true;
+var setDocumentHeader = false;
 var compileTex = false; 
 var outFileName = "restApiDocumentation";
+var version = "";
+var baseDir = __dirname+'/api-doc/';
+var versionDir = ''
+var partialTex = false;
 
 process.argv.slice(2).forEach(function (val, index, array) {
   console.log(index + ': ' + val);
@@ -115,8 +125,13 @@ process.argv.slice(2).forEach(function (val, index, array) {
       setHeader = false;
   }
   
+  if(val == 'ptT') {
+      partialTex = true;
+  }
+  
   if(val == 'pdf') {
       compileTex = true;
+      setDocumentHeader = true;
       console.log('compile: ' + compileTex)
   }
 
@@ -124,15 +139,33 @@ process.argv.slice(2).forEach(function (val, index, array) {
       outFileName = val.substring(val.indexOf('=')+1, val.length);
   }
   
-  
-  
+  if(val.substring(0, val.indexOf('=')) == 'version') {
+      version = val.substring(val.indexOf('=')+1, val.length);
+  }
 });
 
-var fileList = fs.readdirSync(__dirname+'/api-doc/v1');
+/* Set version dir */
+var dirs = fs.readdirSync(__dirname+'/api-doc');
+
+console.log(dirs)
+if(version) {
+    for(var i = dirs.length -1; i>=0; i--) {
+        if(dirs[i] == version) {
+            versionDir = baseDir + version + '/';
+            break;
+        }
+    }
+} else {
+    versionDir = baseDir + dirs[dirs.length -1] + '/';
+}
+
+console.log(versionDir)
+
+var fileList = fs.readdirSync(versionDir);
 
 var endpointStrings = {};
 for(var i = fileList.length -1; i >= 0; i--) {
-    var endpoints = JSON.parse(fs.readFileSync(__dirname+'/api-doc/v1/'+fileList[i], 'utf8'));
+    var endpoints = JSON.parse(fs.readFileSync(versionDir + fileList[i], 'utf8'));
     endpointStrings[fileList[i]] = parseEndpoints(fileList[i], endpoints)
 }
 
@@ -149,9 +182,8 @@ if(setDocumentHeader) {
     documentHeaderStr += '\\usepackage[usenames,dvipsnames]{color} \n';
     documentHeaderStr += '\\setcounter{secnumdepth}{0} \n';
     documentHeaderStr += '% Margins \n \\topmargin=-0.45in \n \\evensidemargin=0in \n \\oddsidemargin=0in \n \\textwidth=6.5in \n \\textheight=9.0in \n \\headsep=0.25in \n';
+    documentHeaderStr += '\\usepackage{caption} \n \\captionsetup{ \n  font=footnotesize, \n justification=raggedright, \n singlelinecheck=false \n}';
 }
-
-documentHeaderStr += '\\usepackage{caption} \n \\captionsetup{ \n  font=footnotesize, \n justification=raggedright, \n singlelinecheck=false \n}'
 
 /**
  * Set header
@@ -178,12 +210,17 @@ for( var i = endpointKeys.length - 1 ; i >= 0; i-- ) {
     latexOutString += endpointStrings[endpointKeys[i]];    
 }
 
-var documentStr = documentHeaderStr + parseDocument(latexOutString);
+/* Full latex document or partial document for including in existing latex. */
+if(partialTex) {
+    var documentStr = latexOutString;
+} else {
+    var documentStr = documentHeaderStr + parseDocument(latexOutString);
+}
 
 /**
  * Save file.
  */
-var dirName = './api-doc/tex/';
+var dirName = baseDir + 'tex/';
 if (!fs.existsSync(dirName)){
     fs.mkdirSync(dirName);
 }

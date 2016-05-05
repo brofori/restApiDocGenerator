@@ -90,7 +90,12 @@ When running the software with -- mode main.js v1 -- a tex file is generated.
 
 For generating a pdf file use -- node main.js pdf --
 
-If you want to use the generated .tex file within an existing latex documentation add the -- nh -- argument to prevent generation of headers. 
+Arguments:
+ - pdf: generate .pdf file
+ - nh: don't set header. (API Documentation)
+ - ptT: build partial .tex file (No usepackage and \begin document strings). For including in existing tex file.
+ - version=NAME_OF_VERSION_FOLDER: sets which version should be used.
+ - filename=YOUR_FILENAME: sets the output filename. 
 
 ## Examples
 Pleas have a look at the -- example.pdf -- and the json files in the -- api/v1 -- folder.
