@@ -1,0 +1,26 @@
+{
+  "route": "/:userid",
+  "method": "GET",
+  "request": {
+    "userid": {
+      "type": "string",
+      "locatedIn": "query",
+      "required": true,
+      "description": "User id.",
+      "value": "mongo db id"
+    }
+  },
+  "responses": {
+    "200": {
+      "message": "User",
+      "status": true,
+      "data": [
+        {
+          "name": "string",
+          "id": "string",
+          "email": "string"
+        }
+      ]
+    }
+  }
+}

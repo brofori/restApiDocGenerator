@@ -1,0 +1,24 @@
+{
+  "route": "/",
+  "method": "GET",
+  "request": {
+  },
+  "responses": {
+    "200": {
+      "message": "List of all users",
+      "status": true,
+      "data": [
+        {
+          "name": "string",
+          "id": "string",
+          "email": "string"
+        },
+        {
+          "name": "string",
+          "id": "string",
+          "email": "string"
+        }
+      ]
+    }
+  }
+}

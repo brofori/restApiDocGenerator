@@ -22,7 +22,7 @@ SOFTWARE.
 
 const exec = require('child_process').exec;
 const fs = require('fs');
-
+const path = require('path');
 /* VARIABLES */
 
 var methodEnum = { ANY: {color: 'Gray'}, GET: {color: 'YellowGreen'}, POST: {color: 'NavyBlue'}, PUT: {color:'magenta'}, DELETE: {color:'red'}};
@@ -79,14 +79,74 @@ var parseSingleEndpoint = function(endpoint){
     return methodstr + descriptionStr + requestParamStr + responseParamStr;
 }
 
-var parseEndpoints = function(endpointBaseName, endpoints) {
-    var latexStr = '\\subsection*{/'+ endpointBaseName.substring(0,endpointBaseName.indexOf('.')) +'}\n';
+var parseEndpoints = function(baseRoute, endpoints) {
+    // var latexStr = '\\subsection*{/'+ endpointBaseName.substring(0,endpointBaseName.indexOf('.')) +'}\n';
+    var latexStr = '\\subsection*{/'+ baseRoute +'}\n';
     
-    for(var i = endpoints.length -1; i >= 0; i--) {
-        latexStr += parseSingleEndpoint(endpoints[i]);
+    for(var j = endpoints.length -1; j >= 0; j--) {
+        latexStr += parseSingleEndpoint(endpoints[j]);
     }
     
     return latexStr;
+}
+
+var parseEndpointsRecursive = function(endpointCollection, done) {
+    'use strict'
+    let endpointsLatex = '';
+    /*pending base routes */
+    let pending = Object.keys(endpointCollection).length;
+    if(!pending) return done(err);
+    console.log(endpointCollection)
+    for(let key in endpointCollection) {
+        let endpoints = endpointCollection[key];
+        let endpointLatexStr = '\\subsection*{/'+ key +'}\n';
+        for(let endpointKey in endpoints) {
+            let endpoint = endpoints[endpointKey];
+            if(endpoint instanceof Array) {
+                parseEndpointsRecursive(endpoint, function(err,resEndpointStr){
+                    endpointsLatex += resEndpointStr;
+                    if (!--pending) done(null, endpointLatexStr);
+                });
+            } else {
+                
+                endpointLatexStr += parseSingleEndpoint(endpoint);
+                endpointsLatex += endpointLatexStr;
+                if (!--pending) done(null, endpointsLatex);
+            }
+        }
+    }
+
+}
+
+var readEndpointFiles = function(dir, done) {
+    'use strict'
+    let endpoints = {}
+    fs.readdir(dir,function(err,list){
+        let pending = list.length;
+        if(!pending) return done(err);
+
+        for(let i = list.length-1; i>=0;i--) {
+
+            let file = path.resolve(dir, list[i]);
+            fs.stat(file, function(err, stat) {
+                if (stat && stat.isDirectory()) {
+                    readEndpointFiles(file, function(err, resEndpoints) {
+                        if(!endpoints[path.basename(dir)]) endpoints[path.basename(dir)] =[]
+                        endpoints[path.basename(dir)][Object.keys(resEndpoints)[0]]=resEndpoints[Object.keys(resEndpoints)[0]];
+                        if (!--pending) done(null, endpoints);
+                    });
+                } else {
+                    let endpointJson = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+                    if(!endpoints[path.basename(dir)]) endpoints[path.basename(dir)] =[]
+                    endpoints[path.basename(dir)].push(endpointJson);
+                    if (!--pending) done(null, endpoints);
+                }
+            });
+        
+        }
+    
+    });
 }
 
 /* 
@@ -110,8 +170,8 @@ var parseEndpoints = function(endpointBaseName, endpoints) {
  */
 
 var setHeader = true;
-var setDocumentHeader = false;
-var compileTex = false; 
+var setDocumentHeader = true;
+var compileTex = true; 
 var outFileName = "restApiDocumentation";
 var version = "";
 var baseDir = __dirname+'/api-doc/';
@@ -144,115 +204,111 @@ process.argv.slice(2).forEach(function (val, index, array) {
   }
 });
 
-/* Set version dir */
-var dirs = fs.readdirSync(__dirname+'/api-doc');
+if(!version) {
+    var dirs = fs.readdirSync(__dirname+'/api-doc');
+    version = path.basename(baseDir + dirs[dirs.length -1]);
+}
 
-console.log(dirs)
-if(version) {
-    for(var i = dirs.length -1; i>=0; i--) {
-        if(dirs[i] == version) {
-            versionDir = baseDir + version + '/';
-            break;
-        }
+res = readEndpointFiles(baseDir + version +'/', function(err, endpoints) {
+    if (err) throw err;
+
+    var endpointsLatex = {};
+
+    // for (var baseRoute in endpoints[version]) {
+    //     endpointsLatex[baseRoute] = parseEndpoints(baseRoute, endpoints[version][baseRoute]);
+    // }
+
+    var latexOutString = ''
+
+    /**
+     * Set document header
+     */
+    var documentHeaderStr = '';
+
+    if(setDocumentHeader) {
+        documentHeaderStr += '\\documentclass{article} \n';
+        documentHeaderStr += '\\usepackage{listings} \n';
+        documentHeaderStr += '\\usepackage[usenames,dvipsnames]{color} \n';
+        documentHeaderStr += '\\setcounter{secnumdepth}{0} \n';
+        documentHeaderStr += '% Margins \n \\topmargin=-0.45in \n \\evensidemargin=0in \n \\oddsidemargin=0in \n \\textwidth=6.5in \n \\textheight=9.0in \n \\headsep=0.25in \n';
+        documentHeaderStr += '\\usepackage{caption} \n \\captionsetup{ \n  font=footnotesize, \n justification=raggedright, \n singlelinecheck=false \n}';
     }
-} else {
-    versionDir = baseDir + dirs[dirs.length -1] + '/';
-}
 
-console.log(versionDir)
+    /**
+     * Set header
+     */
+        
+    if(setHeader) {
+        latexOutString += '\\section{Rest API Documentation} \n';
+    }
 
-var fileList = fs.readdirSync(versionDir);
-
-var endpointStrings = {};
-for(var i = fileList.length -1; i >= 0; i--) {
-    var endpoints = JSON.parse(fs.readFileSync(versionDir + fileList[i], 'utf8'));
-    endpointStrings[fileList[i]] = parseEndpoints(fileList[i], endpoints)
-}
-
-var latexOutString = ''
-
-/**
- * Set document header
- */
-var documentHeaderStr = '';
-
-if(setDocumentHeader) {
-    documentHeaderStr += '\\documentclass{article} \n';
-    documentHeaderStr += '\\usepackage{listings} \n';
-    documentHeaderStr += '\\usepackage[usenames,dvipsnames]{color} \n';
-    documentHeaderStr += '\\setcounter{secnumdepth}{0} \n';
-    documentHeaderStr += '% Margins \n \\topmargin=-0.45in \n \\evensidemargin=0in \n \\oddsidemargin=0in \n \\textwidth=6.5in \n \\textheight=9.0in \n \\headsep=0.25in \n';
-    documentHeaderStr += '\\usepackage{caption} \n \\captionsetup{ \n  font=footnotesize, \n justification=raggedright, \n singlelinecheck=false \n}';
-}
-
-/**
- * Set header
- */
+    /**
+     * set endpoint output
+     */
+     parseEndpointsRecursive(endpoints[version], function(err, endpointsLatexStr){
+        if (err) throw err;
+        console.log(endpointsLatexStr);
+        latexOutString += endpointsLatexStr
     
-if(setHeader) {
-    latexOutString += '\\section{Rest API Documentation} \n';
-}
 
-/**
- * set endpoint output
- */
 
-if (endpointStrings['base.json']) {
-    latexOutString += endpointStrings['base.json'];
-}
+        // if (endpointsLatex['base']) {
+        //     latexOutString += endpointsLatex['base'];
+        // }
 
-var endpointKeys = Object.keys(endpointStrings);
-for( var i = endpointKeys.length - 1 ; i >= 0; i-- ) {
-    if(endpointKeys[i] == 'base.json') {
-        continue;
-    }
-    
-    latexOutString += endpointStrings[endpointKeys[i]];    
-}
-
-/* Full latex document or partial document for including in existing latex. */
-if(partialTex) {
-    var documentStr = latexOutString;
-} else {
-    var documentStr = documentHeaderStr + parseDocument(latexOutString);
-}
-
-/**
- * Save file.
- */
-var dirName = baseDir + 'tex/';
-if (!fs.existsSync(dirName)){
-    fs.mkdirSync(dirName);
-}
-
-fs.writeFile(dirName + outFileName + '.tex', documentStr, function(err) {
-    if(err) {
-        return console.log(err);
-    }
-
-    console.log("The .tex file was saved!");
-}); 
-
-/**
- * Compile tex file to pdf.
- */
-if(compileTex) {
-    var cmd = 'pdflatex ' + dirName + outFileName;
-
-    exec(cmd, function(error, stdout, stderr) {
-        if(error)
-            console.log(error);
-        if(stdout)
-            console.log(stdout);
-        if(stderr)
-            console.log(stderr);
+        // for (var key in endpointsLatex){
+        //     if(key == 'base') {
+        //         continue;
+        //     }
             
-        if(!error) {
-            fs.unlink('./'+ outFileName + '.log');
-            fs.unlink('./'+ outFileName + '.aux');
-            console.log('success!')
+        //     latexOutString += endpointsLatex[key];    
+        // }
+
+        /* Full latex document or partial document for including in existing latex. */
+        if(partialTex) {
+            var documentStr = latexOutString;
+        } else {
+            var documentStr = documentHeaderStr + parseDocument(latexOutString);
         }
+
+        /**
+         * Save file.
+         */
+        var dirName = baseDir + 'tex/';
+        if (!fs.existsSync(dirName)){
+            fs.mkdirSync(dirName);
+        }
+
+        fs.writeFile(dirName + outFileName + '.tex', documentStr, function(err) {
+            if(err) {
+                return console.log(err);
+            }
+
+            console.log("The .tex file was saved!");
+        }); 
+
+        /**
+         * Compile tex file to pdf.
+         */
+        if(compileTex) {
+            var cmd = 'pdflatex ' + dirName + outFileName;
+
+            exec(cmd, function(error, stdout, stderr) {
+                if(error)
+                    console.log(error);
+                if(stdout)
+                    console.log(stdout);
+                if(stderr)
+                    console.log(stderr);
+                    
+                if(!error) {
+                    fs.unlink('./'+ outFileName + '.log');
+                    fs.unlink('./'+ outFileName + '.aux');
+                    console.log('success!')
+                }
+            });
+        }
+           
     });
-    
-    console.log('tex compiled.')
-}
+});
+

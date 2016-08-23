@@ -1,0 +1,25 @@
+{
+  "route": "/:test",
+  "method": "GET",
+  "request": {
+    "city": {
+      "type": "string",
+      "locatedIn": "query",
+      "required": true,
+      "description": "City name.",
+      "value": "springfield"
+    }
+  },
+  "responses": {
+    "200": {
+      "message": "City.",
+      "status": true,
+      "data": [
+        {
+          "name": "string",
+          "id": "string"
+        }
+      ]
+    }
+  }
+}

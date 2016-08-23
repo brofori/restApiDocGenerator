@@ -1,0 +1,34 @@
+{
+  "route": "/",
+  "method": "PUT",
+  "request": {
+    "email": {
+      "type": "string",
+      "locatedIn": "body",
+      "required": true,
+      "description": "User email.",
+      "value": "String"
+    },
+    "password": {
+      "type": "string",
+      "locatedIn": "body",
+      "required": true,
+      "description": "User password.",
+      "value": "String"
+    },
+    "name": {
+      "type": "string",
+      "locatedIn": "body",
+      "required": true,
+      "description": "User name.",
+      "value": "String"
+    }
+  },
+  "responses": {
+    "201": {
+      "message": "Created user.",
+      "status": true,
+      "data": { "id": "int" }
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "route": "/signin",
+  "method": "POST",
+  "request": {
+    "email": {
+      "type": "string",
+      "locatedIn": "body",
+      "required": true,
+      "description": "User email.",
+      "value": "String"
+    },
+    "password": {
+      "type": "string",
+      "locatedIn": "body",
+      "required": true,
+      "description": "User password.",
+      "value": "String"
+    }
+  },
+  "responses": {
+    "200": {
+      "message": "login success",
+      "status": true,
+      "data": { }
+    }
+  }
+}

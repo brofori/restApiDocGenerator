@@ -1,0 +1,32 @@
+{
+  "route": "/:userid",
+  "method": "POST",
+  "description": "Update user.",
+  "request": {
+    "userid": {
+      "type": "string",
+      "locatedIn": "query",
+      "description": "User id.",
+      "value": "mongo db id",
+      "data": {
+        "type": "string",
+        "locatedIn": "query",
+        "description": "Updated user data.",
+        "value": "Object containing user data."
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "message": "User",
+      "status": true,
+      "data": [
+        {
+          "name": "user1",
+          "id": "userId",
+          "email": "user1@mail.de"
+        }
+      ]
+    }
+  }
+}
