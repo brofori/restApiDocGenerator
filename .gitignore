@@ -1,1 +1,4 @@
 .vscode/launch.json
+api-doc/tex/restApiDocumentation.tex
+node_modules/
+*.pdf

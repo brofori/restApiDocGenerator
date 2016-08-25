@@ -90,64 +90,46 @@ var parseEndpoints = function(baseRoute, endpoints) {
     return latexStr;
 }
 
-var parseEndpointsRecursive = function(endpointCollection, done) {
-    'use strict'
-    let endpointsLatex = '';
-    /*pending base routes */
-    let pending = Object.keys(endpointCollection).length;
-    if(!pending) return done(err);
-    console.log(endpointCollection)
-    for(let key in endpointCollection) {
-        let endpoints = endpointCollection[key];
-        let endpointLatexStr = '\\subsection*{/'+ key +'}\n';
-        for(let endpointKey in endpoints) {
-            let endpoint = endpoints[endpointKey];
-            if(endpoint instanceof Array) {
-                parseEndpointsRecursive(endpoint, function(err,resEndpointStr){
-                    endpointsLatex += resEndpointStr;
-                    if (!--pending) done(null, endpointLatexStr);
-                });
-            } else {
-                
-                endpointLatexStr += parseSingleEndpoint(endpoint);
-                endpointsLatex += endpointLatexStr;
-                if (!--pending) done(null, endpointsLatex);
-            }
+function readRouteDir(baseDir) {
+    "use strict"
+    let enpoints = {};
+
+    let dir = fs.readdirSync(baseDir);
+    for (let i = 0; i<dir.length; i++) {
+        console.log(baseDir+dir[i])
+        if(fs.lstatSync(baseDir+dir[i]).isDirectory() ){
+            enpoints[dir[i]]=readRouteDir(baseDir+dir[i]+'/'); 
+        }else{
+            enpoints[dir[i]]=JSON.parse(fs.readFileSync(baseDir+dir[i])); 
+        }
+    }
+    return enpoints;
+}
+
+var parentKey = '';
+function bulildEndpointLatex(routes) {
+    "use strict"
+    let endpointString = ''
+
+    for (let routeKey in routes) {
+        if(routes[routeKey] instanceof Object && !routes[routeKey].method) {
+            continue;
+        } else {
+            endpointString += parseSingleEndpoint(routes[routeKey])
         }
     }
 
-}
-
-var readEndpointFiles = function(dir, done) {
-    'use strict'
-    let endpoints = {}
-    fs.readdir(dir,function(err,list){
-        let pending = list.length;
-        if(!pending) return done(err);
-
-        for(let i = list.length-1; i>=0;i--) {
-
-            let file = path.resolve(dir, list[i]);
-            fs.stat(file, function(err, stat) {
-                if (stat && stat.isDirectory()) {
-                    readEndpointFiles(file, function(err, resEndpoints) {
-                        if(!endpoints[path.basename(dir)]) endpoints[path.basename(dir)] =[]
-                        endpoints[path.basename(dir)][Object.keys(resEndpoints)[0]]=resEndpoints[Object.keys(resEndpoints)[0]];
-                        if (!--pending) done(null, endpoints);
-                    });
-                } else {
-                    let endpointJson = JSON.parse(fs.readFileSync(file, 'utf8'));
-
-                    if(!endpoints[path.basename(dir)]) endpoints[path.basename(dir)] =[]
-                    endpoints[path.basename(dir)].push(endpointJson);
-                    if (!--pending) done(null, endpoints);
-                }
-            });
-        
+    for (let routeKey in routes) {
+        if(routes[routeKey] instanceof Object && !routes[routeKey].method) {
+            endpointString += '\\subsection*{'+ parentKey + '/' + routeKey +'}\n';
+            parentKey += '/'+routeKey;
+            endpointString += bulildEndpointLatex(routes[routeKey]);
         }
-    
-    });
+    }
+    parentKey = ''
+    return endpointString;
 }
+
 
 /* 
 *
@@ -209,106 +191,104 @@ if(!version) {
     version = path.basename(baseDir + dirs[dirs.length -1]);
 }
 
-res = readEndpointFiles(baseDir + version +'/', function(err, endpoints) {
-    if (err) throw err;
+var baseRouteDir = baseDir + version + '/';
 
-    var endpointsLatex = {};
+var routes = readRouteDir(baseRouteDir);
 
-    // for (var baseRoute in endpoints[version]) {
-    //     endpointsLatex[baseRoute] = parseEndpoints(baseRoute, endpoints[version][baseRoute]);
-    // }
+var endpointsLatex = bulildEndpointLatex(routes);
 
-    var latexOutString = ''
+// for (var baseRoute in endpoints[version]) {
+//     endpointsLatex[baseRoute] = parseEndpoints(baseRoute, endpoints[version][baseRoute]);
+// }
 
-    /**
-     * Set document header
-     */
-    var documentHeaderStr = '';
+var latexOutString = ''
 
-    if(setDocumentHeader) {
-        documentHeaderStr += '\\documentclass{article} \n';
-        documentHeaderStr += '\\usepackage{listings} \n';
-        documentHeaderStr += '\\usepackage[usenames,dvipsnames]{color} \n';
-        documentHeaderStr += '\\setcounter{secnumdepth}{0} \n';
-        documentHeaderStr += '% Margins \n \\topmargin=-0.45in \n \\evensidemargin=0in \n \\oddsidemargin=0in \n \\textwidth=6.5in \n \\textheight=9.0in \n \\headsep=0.25in \n';
-        documentHeaderStr += '\\usepackage{caption} \n \\captionsetup{ \n  font=footnotesize, \n justification=raggedright, \n singlelinecheck=false \n}';
-    }
+/**
+ * Set document header
+ */
+var documentHeaderStr = '';
 
-    /**
-     * Set header
-     */
-        
-    if(setHeader) {
-        latexOutString += '\\section{Rest API Documentation} \n';
-    }
+if(setDocumentHeader) {
+    documentHeaderStr += '\\documentclass{article} \n';
+    documentHeaderStr += '\\usepackage{listings} \n';
+    documentHeaderStr += '\\usepackage[usenames,dvipsnames]{color} \n';
+    documentHeaderStr += '\\setcounter{secnumdepth}{0} \n';
+    documentHeaderStr += '% Margins \n \\topmargin=-0.45in \n \\evensidemargin=0in \n \\oddsidemargin=0in \n \\textwidth=6.5in \n \\textheight=9.0in \n \\headsep=0.25in \n';
+    documentHeaderStr += '\\usepackage{caption} \n \\captionsetup{ \n  font=footnotesize, \n justification=raggedright, \n singlelinecheck=false \n}';
+}
 
-    /**
-     * set endpoint output
-     */
-     parseEndpointsRecursive(endpoints[version], function(err, endpointsLatexStr){
-        if (err) throw err;
-        console.log(endpointsLatexStr);
-        latexOutString += endpointsLatexStr
+/**
+ * Set header
+ */
     
+if(setHeader) {
+    latexOutString += '\\section{Rest API Documentation} \n';
+}
+
+/**
+ * set endpoint output
+ */
 
 
-        // if (endpointsLatex['base']) {
-        //     latexOutString += endpointsLatex['base'];
-        // }
 
-        // for (var key in endpointsLatex){
-        //     if(key == 'base') {
-        //         continue;
-        //     }
+// if (endpointsLatex['base']) {
+//     latexOutString += endpointsLatex['base'];
+// }
+
+// for (var key in endpointsLatex){
+//     if(key == 'base') {
+//         continue;
+//     }
+    
+//     latexOutString += endpointsLatex[key];    
+// }
+
+latexOutString += endpointsLatex;
+
+/* Full latex document or partial document for including in existing latex. */
+if(partialTex) {
+    var documentStr = latexOutString;
+} else {
+    var documentStr = documentHeaderStr + parseDocument(latexOutString);
+}
+
+/**
+ * Save file.
+ */
+var dirName = baseDir + 'tex/';
+if (!fs.existsSync(dirName)){
+    fs.mkdirSync(dirName);
+}
+
+fs.writeFile(dirName + outFileName + '.tex', documentStr, function(err) {
+    if(err) {
+        return console.log(err);
+    }
+
+    console.log("The .tex file was saved!");
+}); 
+
+/**
+ * Compile tex file to pdf.
+ */
+if(compileTex) {
+    var cmd = 'pdflatex ' + dirName + outFileName;
+
+    exec(cmd, function(error, stdout, stderr) {
+        if(error)
+            console.log(error);
+        if(stdout)
+            console.log(stdout);
+        if(stderr)
+            console.log(stderr);
             
-        //     latexOutString += endpointsLatex[key];    
-        // }
-
-        /* Full latex document or partial document for including in existing latex. */
-        if(partialTex) {
-            var documentStr = latexOutString;
-        } else {
-            var documentStr = documentHeaderStr + parseDocument(latexOutString);
+        if(!error) {
+            fs.unlink('./'+ outFileName + '.log');
+            fs.unlink('./'+ outFileName + '.aux');
+            console.log('success!')
         }
-
-        /**
-         * Save file.
-         */
-        var dirName = baseDir + 'tex/';
-        if (!fs.existsSync(dirName)){
-            fs.mkdirSync(dirName);
-        }
-
-        fs.writeFile(dirName + outFileName + '.tex', documentStr, function(err) {
-            if(err) {
-                return console.log(err);
-            }
-
-            console.log("The .tex file was saved!");
-        }); 
-
-        /**
-         * Compile tex file to pdf.
-         */
-        if(compileTex) {
-            var cmd = 'pdflatex ' + dirName + outFileName;
-
-            exec(cmd, function(error, stdout, stderr) {
-                if(error)
-                    console.log(error);
-                if(stdout)
-                    console.log(stdout);
-                if(stderr)
-                    console.log(stderr);
-                    
-                if(!error) {
-                    fs.unlink('./'+ outFileName + '.log');
-                    fs.unlink('./'+ outFileName + '.aux');
-                    console.log('success!')
-                }
-            });
-        }
-           
     });
-});
+}
+           
+    
 
