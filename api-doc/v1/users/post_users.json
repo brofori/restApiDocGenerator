@@ -19,7 +19,6 @@
   "responses": {
     "200": {
       "message": "User",
-      "status": true,
       "data": [
         {
           "name": "user1",

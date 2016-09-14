@@ -6,7 +6,6 @@
   "responses": {
     "200": {
       "message": "List of all users",
-      "status": true,
       "data": [
         {
           "name": "string",

@@ -34,10 +34,113 @@ function readRouteDir(baseDir) {
         if(fs.lstatSync(baseDir+dir[i]).isDirectory() ){
             enpoints[dir[i]]=readRouteDir(baseDir+dir[i]+'/'); 
         }else{
-            enpoints[dir[i]]=JSON.parse(fs.readFileSync(baseDir+dir[i])); 
+
+            enpoints[dir[i].slice(0, -5)]=JSON.parse(fs.readFileSync(baseDir+dir[i])); 
         }
     }
     return enpoints;
+}
+
+// function generateGetRoute(parentKey, endpoint) {
+//     app.get('/'+parentKey+'/'+endpoint)
+// }
+
+function parseRoute(routePath) {
+    return [];
+}
+
+function validateRequest(request,endpointRequest) {
+    "use strict"
+    let routePrams = request.params;
+    for(let routeParam in endpointRequest) {
+
+        if(endpointRequest[routeParam].locatedIn == 'query' && endpointRequest[routeParam].required) {
+            if(!request.params[routeParam] && !request.params[routeParam] instanceof endpointRequest[routeParam].type) {
+                return false;
+            }
+        }
+
+        if(endpointRequest[routeParam].locatedIn == 'body' && endpointRequest[routeParam].required) {
+            if(!request.params[routeParam] && !request.params[routeParam] instanceof endpointRequest[routeParam].type) {
+                return false;
+            }
+        } else {
+            if(request.params[routeParam] && !request.params[routeParam] instanceof endpointRequest[routeParam].type) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+function parseResponseBody(request,endpoint) {
+    "use strict"
+    console.log(request);
+    let routePrams = parseRoute(request.route.path);
+    //TODO: recursive json response parser for 200 responses.
+    if(endpoint.responses['200']) {
+        return endpoint.responses['200'];
+    }
+    if(endpoint.responses['201']) {
+        return endpoint.responses['201'];
+    }
+    return {'error': '200/201 response not defined'};
+}
+
+var parentKey = '';
+function generateRouteStubs(routes) {
+    "use strict"
+
+    for (let routeKey in routes) {
+        if(routes[routeKey] instanceof Object && !routes[routeKey].method) {
+            continue;
+        } else {
+            let path = parentKey+routes[routeKey].route
+            console.log('method: '+routes[routeKey].method+'path: ' + path);
+            let endpointRequest = routes[routeKey].request;
+            switch(routes[routeKey].method) {
+                case 'GET':
+                    app.get(path,function(req,res) {
+                        if(validateRequest(req, routes[routeKey].request)){
+                            res.send(parseResponseBody(req,routes[routeKey]));
+                        }
+                    });
+                case 'PUT':
+                    
+                    app.put(path,function(req,res) {
+                        routeKey = 'put_'+req.originalUrl.slice(1,req.originalUrl.length)
+                        if(validateRequest(req, routes[routeKey].request)){
+                            res.send(parseResponseBody(req,routes[routeKey]));
+                        }
+                    });
+                case 'POST':
+                    app.post(path,function(req,res) {
+
+                        if(validateRequest(req, routes[routeKey].request)){
+                            res.send(parseResponseBody(req,routes[routeKey]));
+                        }
+                    });
+                case 'DELETE':
+                    app.delete(path,function(req,res) {
+                        if(validateRequest(req, routes[routeKey].request)){
+                            res.send(parseResponseBody(req,routes[routeKey]));
+                        }
+                    });
+                default:
+                    continue;
+            }
+        }
+    }
+
+    for (let routeKey in routes) {
+        if(routes[routeKey] instanceof Object && !routes[routeKey].method) {
+            parentKey += '/'+routeKey;
+            generateRouteStubs(routes[routeKey]);
+        }
+    }
+    parentKey = ''
+    return;
 }
 
 
@@ -71,62 +174,9 @@ var baseRouteDir = baseDir + version + '/';
 
 var routes = readRouteDir(baseRouteDir);
 
-function generateGetRoute(parentKey, endpoint) {
-    app.get('/'+parentKey+'/'+endpoint)
-}
-/** */
+generateRouteStubs(routes);
 
-function parseResponseBody(request,endpoint) {
-    return;
-}
-var parentKey = '';
-function generateRouteStubs(routes) {
-    "use strict"
-
-
-    for (let routeKey in routes) {
-        if(routes[routeKey] instanceof Object && !routes[routeKey].method) {
-            continue;
-        } else {
-            console.log(parentKey+'/'+routeKey);
-
-            // TODO validate request and send status code
-            switch(routes[routeKey].method) {
-                case 'GET':
-                    app.get(parentKey + '/' + routeKey,function(req,res) {
-                        res.send(parseResponseBody(req,routes[routeKey]));
-                    });
-                case 'PUT':
-                    app.put(parentKey + '/' + routeKey,function(req,res) {
-                        res.send(parseResponseBody(req,routes[routeKey]));
-                    });
-                case 'POST':
-                    app.post(parentKey+'/'+routeKey,function(req,res) {
-                        res.send(parseResponseBody(req,routes[routeKey]));
-                    });
-                case 'DELETE':
-                    app.delete(parentKey+'/'+routeKey,function(req,res) {
-                        res.send(parseResponseBody(req,routes[routeKey]));
-                    });
-                default:
-                    continue;
-            }
-        }
-    }
-
-    for (let routeKey in routes) {
-        if(routes[routeKey] instanceof Object && !routes[routeKey].method) {
-            parentKey += '/'+routeKey;
-            console.log(parentKey+'/'+routeKey);
-            parseResponseBody(routes[routeKey]);
-        }
-    }
-    parentKey = ''
-    return;
-}
-/** */
-
-var server = app.listen(8081, function () {
+var server = app.listen(8081,'localhost', function () {
 
   var host = server.address().address
   var port = server.address().port
